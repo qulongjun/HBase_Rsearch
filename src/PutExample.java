@@ -8,6 +8,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -106,15 +107,44 @@ public class PutExample {
 	 *            列名
 	 * @throws IOException
 	 */
-	public static void GetData(String tableName, String row,
+	public static String GetData(String tableName, String row,
 			String columnFamily, String column) throws IOException {
 		HTable table = new HTable(hbaseConfiguration, tableName);
 		Get get = new Get(Bytes.toBytes(row));
+		//get.addColumn(family, qualifier);//指定get取得那一列的数据
+		//get.addFamily(family);//指定取得某一个列族数据
 		Result result = table.get(get);
 		byte[] rb = result.getValue(Bytes.toBytes(columnFamily),
 				Bytes.toBytes(column));
 		String value = new String(rb, "UTF-8");
 		System.out.println(value);
+		return value;
+	}
+	/**
+	 * 获取指定列的所有数据
+	 * 
+	 * @param tableName
+	 *            表名
+	 * @param row
+	 *            行键key
+	 * @param columnFamily
+	 *            列族
+	 * @param column
+	 *            列名
+	 * @throws IOException
+	 */
+	public static List<KeyValue> GetDataByColumnn(String tableName, String row,
+			String columnFamily, String column) throws IOException {
+		HTable table = new HTable(hbaseConfiguration, tableName);
+		Get get = new Get(Bytes.toBytes(row));
+		//get.addColumn(family, qualifier);//指定get取得那一列的数据
+		//get.addFamily(family);//指定取得某一个列族数据
+		Result result = table.get(get);
+		List<KeyValue> columnList=result.getColumn(Bytes.toBytes(columnFamily), Bytes.toBytes(column));
+		for (KeyValue re : columnList) {
+			System.out.println(new String(re.getValue(),"UTF-8"));
+		}
+		return columnList;
 	}
 
 	/**
@@ -125,6 +155,7 @@ public class PutExample {
 	 * @throws IOException
 	 */
 	public static void ScanAll(String tableName) throws IOException {
+		System.out.println("开始扫描全表......");
 		HTable table = new HTable(hbaseConfiguration, tableName);
 		Scan scan = new Scan();
 		ResultScanner resultScanner = table.getScanner(scan);
@@ -202,6 +233,11 @@ public class PutExample {
 		try {
 
 			PutExample.CreateTable("userinfo", "vio1");
+			PutExample.PutData("userinfo", getPut("row1", "vio1", "col1", "Hello1"));
+			PutExample.PutData("userinfo", getPut("row1", "vio1", "col2", "Hello2"));
+			//PutExample.GetData("userinfo", "row1", "vio1", "col1");
+			//PutExample.GetData("userinfo", "row1", "vio1", "col2");
+			PutExample.GetDataByColumnn("userinfo", "row1", "vio1", "col1");
 			// boolean check =
 			// checkPut("userinfo",Bytes.toBytes("row1"),Bytes.toBytes("vio1"),Bytes.toBytes("col1"),
 			// Bytes.toBytes("驾驶车辆违法信息2："), getPut("row1", "vio1", "col1",
@@ -223,7 +259,7 @@ public class PutExample {
 			// puts.add(getPut("row11", "baseinfo", "vio2", "驾驶车辆违法信息7："));
 			// ListPut("userinfo", puts);
 			PutExample.ScanAll("userinfo");
-
+			
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
