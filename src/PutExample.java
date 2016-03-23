@@ -12,6 +12,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -77,6 +78,22 @@ public class PutExample {
 		return put;
 	}
 
+	public static Delete getDelete(String row, String columnFamily,
+			String column) throws IOException {
+		Delete delete = null;
+		if (row != null) {
+			delete = new Delete(Bytes.toBytes(row));
+		}
+		if (columnFamily != null) {
+			if (column != null) {
+				delete.deleteColumn(Bytes.toBytes(columnFamily), Bytes.toBytes(column));
+			}else{
+				delete.deleteFamily(Bytes.toBytes(columnFamily));
+			}
+		}
+		return delete;
+	}
+
 	/**
 	 * 向表中插入一条数据
 	 * 
@@ -111,8 +128,8 @@ public class PutExample {
 			String columnFamily, String column) throws IOException {
 		HTable table = new HTable(hbaseConfiguration, tableName);
 		Get get = new Get(Bytes.toBytes(row));
-		//get.addColumn(family, qualifier);//指定get取得那一列的数据
-		//get.addFamily(family);//指定取得某一个列族数据
+		// get.addColumn(family, qualifier);//指定get取得那一列的数据
+		// get.addFamily(family);//指定取得某一个列族数据
 		Result result = table.get(get);
 		byte[] rb = result.getValue(Bytes.toBytes(columnFamily),
 				Bytes.toBytes(column));
@@ -120,6 +137,24 @@ public class PutExample {
 		System.out.println(value);
 		return value;
 	}
+
+	/**
+	 * 批量获取指定行的所有数据
+	 * 
+	 * @param tableName
+	 *            表名
+	 * @param gets
+	 *            GET集合
+	 * @return
+	 * @throws IOException
+	 */
+	public static Result[] ListGetData(String tableName, List<Get> gets)
+			throws IOException {
+		HTable table = new HTable(hbaseConfiguration, tableName);
+		Result[] results = table.get(gets);
+		return results;
+	}
+
 	/**
 	 * 获取指定列的所有数据
 	 * 
@@ -137,12 +172,13 @@ public class PutExample {
 			String columnFamily, String column) throws IOException {
 		HTable table = new HTable(hbaseConfiguration, tableName);
 		Get get = new Get(Bytes.toBytes(row));
-		//get.addColumn(family, qualifier);//指定get取得那一列的数据
-		//get.addFamily(family);//指定取得某一个列族数据
+		// get.addColumn(family, qualifier);//指定get取得那一列的数据
+		// get.addFamily(family);//指定取得某一个列族数据
 		Result result = table.get(get);
-		List<KeyValue> columnList=result.getColumn(Bytes.toBytes(columnFamily), Bytes.toBytes(column));
+		List<KeyValue> columnList = result.getColumn(
+				Bytes.toBytes(columnFamily), Bytes.toBytes(column));
 		for (KeyValue re : columnList) {
-			System.out.println(new String(re.getValue(),"UTF-8"));
+			System.out.println(new String(re.getValue(), "UTF-8"));
 		}
 		return columnList;
 	}
@@ -227,17 +263,51 @@ public class PutExample {
 	}
 
 	/**
+	 * 从表中删除一条数据
+	 * 
+	 * @param tableName
+	 * @param put
+	 * @throws IOException
+	 */
+	public static void DeleteData(String tableName, Delete delete) throws IOException {
+		if (delete != null) {
+			HTable table = new HTable(hbaseConfiguration, tableName);
+			table.delete(delete);;
+			System.out.println("数据删除成功！");
+		} else {
+			System.out.println("数据删除失败！");
+		}
+	}
+
+	/**
 	 * @param args
 	 */
 	public static void main(String[] args) {
 		try {
 
 			PutExample.CreateTable("userinfo", "vio1");
-			PutExample.PutData("userinfo", getPut("row1", "vio1", "col1", "Hello1"));
-			PutExample.PutData("userinfo", getPut("row1", "vio1", "col2", "Hello2"));
-			//PutExample.GetData("userinfo", "row1", "vio1", "col1");
-			//PutExample.GetData("userinfo", "row1", "vio1", "col2");
-			PutExample.GetDataByColumnn("userinfo", "row1", "vio1", "col1");
+			PutExample.PutData("userinfo",
+					getPut("row1", "vio1", "col1", "Hello1"));
+			PutExample.PutData("userinfo",
+					getPut("row1", "vio1", "col2", "Hello2"));
+			PutExample.PutData("userinfo",
+					getPut("row1", "vio1", "col3", "Hello3"));
+			PutExample.PutData("userinfo",
+					getPut("row1", "vio1", "col4", "Hello4"));
+			PutExample.PutData("userinfo",
+					getPut("row2", "vio1", "col1", "World1"));
+			PutExample.PutData("userinfo",
+					getPut("row2", "vio1", "col2", "World2"));
+			PutExample.PutData("userinfo",
+					getPut("row2", "vio1", "col3", "World3"));
+			PutExample.PutData("userinfo",
+					getPut("row2", "vio1", "col4", "World4"));
+			PutExample.PutData("userinfo",
+					getPut("row2", "vio1", "col5", "World5"));
+
+			// PutExample.GetData("userinfo", "row1", "vio1", "col1");
+			// PutExample.GetData("userinfo", "row1", "vio1", "col2");
+
 			// boolean check =
 			// checkPut("userinfo",Bytes.toBytes("row1"),Bytes.toBytes("vio1"),Bytes.toBytes("col1"),
 			// Bytes.toBytes("驾驶车辆违法信息2："), getPut("row1", "vio1", "col1",
@@ -258,8 +328,50 @@ public class PutExample {
 			// puts.add(getPut("row10", "baseinfo", "vio2", "驾驶车辆违法信息7："));
 			// puts.add(getPut("row11", "baseinfo", "vio2", "驾驶车辆违法信息7："));
 			// ListPut("userinfo", puts);
+
+			// 批量查找
+			// List<Get> gets = new ArrayList<Get>();
+			// gets.add(new Get(Bytes.toBytes("row1")));
+			// gets.add(new Get(Bytes.toBytes("row2")));
+			// Result[] results = ListGetData("userinfo", gets);
+			// for (Result result : results) {
+			// String row = Bytes.toString(result.getRow());
+			// System.out.println("Row:" + row);
+			// if (result.containsColumn(Bytes.toBytes("vio1"),
+			// Bytes.toBytes("col1"))) {
+			// System.out.println("col1:"
+			// + Bytes.toString(result.getValue(Bytes.toBytes("vio1"),
+			// Bytes.toBytes("col1"))));
+			// }
+			// if (result.containsColumn(Bytes.toBytes("vio1"),
+			// Bytes.toBytes("col2"))) {
+			// System.out.println("col2:"
+			// + Bytes.toString(result.getValue(Bytes.toBytes("vio1"),
+			// Bytes.toBytes("col2"))));
+			// }
+			// if (result.containsColumn(Bytes.toBytes("vio1"),
+			// Bytes.toBytes("col3"))) {
+			// System.out.println("col3:"
+			// + Bytes.toString(result.getValue(Bytes.toBytes("vio1"),
+			// Bytes.toBytes("col3"))));
+			// }
+			// if (result.containsColumn(Bytes.toBytes("vio1"),
+			// Bytes.toBytes("col4"))) {
+			// System.out.println("col4:"
+			// + Bytes.toString(result.getValue(Bytes.toBytes("vio1"),
+			// Bytes.toBytes("col4"))));
+			// }
+			//
+			// }
+			// for (Result result : results) {
+			// for (KeyValue kv : result.raw()) {
+			// System.out.println("Row: "+Bytes.toString(kv.getRow())+",Value："+Bytes.toString(kv.getValue()));
+			// }
+			// }
 			PutExample.ScanAll("userinfo");
-			
+			PutExample.DeleteData("userinfo", getDelete("row1","vio1","col1"));
+			PutExample.ScanAll("userinfo");
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
