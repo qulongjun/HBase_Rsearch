@@ -98,8 +98,7 @@ public class PutExample {
 		return delete;
 	}
 
-	public static Get getGet(String row)
-			throws IOException {
+	public static Get getGet(String row) throws IOException {
 		Get get = new Get(Bytes.toBytes(row));
 		return get;
 	}
@@ -156,7 +155,7 @@ public class PutExample {
 				return result;
 			}
 		} catch (Exception e) {
-			System.out.println("Error:"+e);
+			System.out.println("Error:" + e);
 		}
 		return null;
 	}
@@ -214,25 +213,76 @@ public class PutExample {
 	 * @throws IOException
 	 */
 	public static void ScanAll(String tableName) throws IOException {
-		System.out.println("开始扫描全表......");
-		HTable table = new HTable(hbaseConfiguration, tableName);
-		Scan scan = new Scan();
-		ResultScanner resultScanner = table.getScanner(scan);
-		for (Result result : resultScanner) {
-			List<Cell> cells = result.listCells();
-			for (Cell cell : cells) {
-				byte[] rb = cell.getValueArray();
-				String row = new String(result.getRow(), "UTF-8");
-				String family = new String(CellUtil.cloneFamily(cell), "UTF-8");
-				String qualifier = new String(CellUtil.cloneQualifier(cell),
-						"UTF-8");
-				String value = new String(CellUtil.cloneValue(cell), "UTF-8");
-				System.out.println("[row:" + row + "],[family:" + family
-						+ "],[qualifier:" + qualifier + "],[value:" + value
-						+ "]");
+		ResultScanner resultScanner = null;
+		try {
+			System.out.println("开始扫描全表......");
+			HTable table = new HTable(hbaseConfiguration, tableName);
+			Scan scan = new Scan();
+			resultScanner = table.getScanner(scan);
+			for (Result result : resultScanner) {
+				List<Cell> cells = result.listCells();
+				for (Cell cell : cells) {
+					byte[] rb = cell.getValueArray();
+					String row = new String(result.getRow(), "UTF-8");
+					String family = new String(CellUtil.cloneFamily(cell),
+							"UTF-8");
+					String qualifier = new String(
+							CellUtil.cloneQualifier(cell), "UTF-8");
+					String value = new String(CellUtil.cloneValue(cell),
+							"UTF-8");
+					System.out.println("[row:" + row + "],[family:" + family
+							+ "],[qualifier:" + qualifier + "],[value:" + value
+							+ "]");
+				}
 			}
+
+			System.out.println("全表扫描结束......");
+		} catch (Exception e) {
+			System.out.println("Error:" + e);
+		} finally {
+			resultScanner.close();
 		}
-		System.out.println("全表扫描结束......");
+
+	}
+
+	/**
+	 * 获取指定列组的所有数据
+	 * 
+	 * @param tableName
+	 *            表名
+	 * @throws IOException
+	 */
+	public static void ScanFamily(String tableName, String familyColumn)
+			throws IOException {
+		ResultScanner resultScanner = null;
+		try {
+			System.out.println("开始全列族扫描......");
+			HTable table = new HTable(hbaseConfiguration, tableName);
+			Scan scan = new Scan();
+			scan.addFamily(Bytes.toBytes(familyColumn));
+			resultScanner = table.getScanner(scan);
+			for (Result result : resultScanner) {
+				List<Cell> cells = result.listCells();
+				for (Cell cell : cells) {
+					byte[] rb = cell.getValueArray();
+					String row = new String(result.getRow(), "UTF-8");
+					String family = new String(CellUtil.cloneFamily(cell),
+							"UTF-8");
+					String qualifier = new String(
+							CellUtil.cloneQualifier(cell), "UTF-8");
+					String value = new String(CellUtil.cloneValue(cell),
+							"UTF-8");
+					System.out.println("[row:" + row + "],[family:" + family
+							+ "],[qualifier:" + qualifier + "],[value:" + value
+							+ "]");
+				}
+			}
+			System.out.println("全列族扫描结束......");
+		} catch (Exception e) {
+			System.out.println("Error:" + e);
+		} finally {
+			resultScanner.close();
+		}
 	}
 
 	/**
@@ -361,18 +411,18 @@ public class PutExample {
 
 			PutExample.CreateTable("userinfo", "vio1");
 
-			// List<Put> putList=new ArrayList<Put>();
-			// putList.add(getPut("row1", "vio1", "col1", "Hello1"));
-			// putList.add(getPut("row1", "vio1", "col2", "Hello2"));
-			// putList.add(getPut("row1", "vio1", "col3", "Hello3"));
-			// putList.add(getPut("row1", "vio1", "col4", "Hello4"));
-			// putList.add(getPut("row1", "vio1", "col5", "Hello5"));
-			// putList.add(getPut("row2", "vio1", "col1", "Hello1"));
-			// putList.add(getPut("row2", "vio1", "col2", "Hello2"));
-			// putList.add(getPut("row2", "vio1", "col3", "Hello3"));
-			// putList.add(getPut("row2", "vio1", "col4", "Hello4"));
-			// putList.add(getPut("row2", "vio1", "col5", "Hello5"));
-			// PutExample.ListPut("userinfo", putList);
+			List<Put> putList = new ArrayList<Put>();
+			putList.add(getPut("row1", "vio1", "col1", "Hello1"));
+			putList.add(getPut("row1", "vio1", "col2", "Hello2"));
+			putList.add(getPut("row1", "vio1", "col3", "Hello3"));
+			putList.add(getPut("row1", "vio1", "col4", "Hello4"));
+			putList.add(getPut("row1", "vio1", "col5", "Hello5"));
+			putList.add(getPut("row2", "vio1", "col1", "Hello1"));
+			putList.add(getPut("row2", "vio1", "col2", "Hello2"));
+			putList.add(getPut("row2", "vio1", "col3", "Hello3"));
+			putList.add(getPut("row2", "vio1", "col4", "Hello4"));
+			putList.add(getPut("row2", "vio1", "col5", "Hello5"));
+			PutExample.ListPut("userinfo", putList);
 			// PutExample.GetData("userinfo", "row1", "vio1", "col1");
 			// PutExample.GetData("userinfo", "row1", "vio1", "col2");
 
@@ -463,28 +513,32 @@ public class PutExample {
 			// delete.addColumns(Bytes.toBytes("vio1"), Bytes.toBytes("col3"));
 			// table.delete(getDeleteColumn("row1","vio1","col3"));
 
-			List<Row> branch=new ArrayList<Row>();
-			branch.add(getPut("row1", "vio1", "col1", "hello1"));
-			branch.add(getPut("row1", "vio1", "col2", "hello2"));
-			branch.add(getPut("row1", "vio1", "col2", "hello3"));
-			
-			Object[] results = PutExample.execBranch("userinfo", branch);
-			for (int i = 0; i < results.length; i++) {
-				System.out.println("Result["+i+"]:"+results[i]);
-			}
-			List<Row> branch2=new ArrayList<Row>();
-			branch2.add(getGetColumn("row1", "vio1", "col1"));
-			branch2.add(getGetColumn("row1", "vio1", "col3"));
-			branch2.add(getDeleteColumn("row1", "vio1", "col3"));
-			Object[] results2 = PutExample.execBranch("userinfo", branch2);
-			for (int i = 0; i < results2.length; i++) {
-				System.out.println("Result["+i+"]:"+results2[i]);
-			}
-//			
-//			PutExample.ScanAll("userinfo");
-			//Result result = GetData("userinfo", getGetFamily("row1", "vio1"));
-			//System.out.println(Bytes.toString(result.getValue(Bytes.toBytes("vio1"), Bytes.toBytes("col1"))));
-			
+			// List<Row> branch=new ArrayList<Row>();
+			// branch.add(getPut("row1", "vio1", "col1", "hello1"));
+			// branch.add(getPut("row1", "vio1", "col2", "hello2"));
+			// branch.add(getPut("row1", "vio1", "col2", "hello3"));
+			//
+			// Object[] results = PutExample.execBranch("userinfo", branch);
+			// for (int i = 0; i < results.length; i++) {
+			// System.out.println("Result["+i+"]:"+results[i]);
+			// }
+			// List<Row> branch2=new ArrayList<Row>();
+			// branch2.add(getGetColumn("row1", "vio1", "col1"));
+			// branch2.add(getGetColumn("row1", "vio1", "col3"));
+			// branch2.add(getDeleteColumn("row1", "vio1", "col3"));
+			// Object[] results2 = PutExample.execBranch("userinfo", branch2);
+			// for (int i = 0; i < results2.length; i++) {
+			// System.out.println("Result["+i+"]:"+results2[i]);
+			// }
+			//
+			// PutExample.ScanAll("userinfo");
+			// Result result = GetData("userinfo", getGetFamily("row1",
+			// "vio1"));
+			// System.out.println(Bytes.toString(result.getValue(Bytes.toBytes("vio1"),
+			// Bytes.toBytes("col1"))));
+
+			PutExample.ScanFamily("userinfo", "vio1");
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
