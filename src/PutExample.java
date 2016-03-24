@@ -19,6 +19,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -78,20 +79,43 @@ public class PutExample {
 		return put;
 	}
 
-	public static Delete getDelete(String row, String columnFamily,
-			String column) throws IOException {
-		Delete delete = null;
-		if (row != null) {
-			delete = new Delete(Bytes.toBytes(row));
-		}
-		if (columnFamily != null) {
-			if (column != null) {
-				delete.deleteColumn(Bytes.toBytes(columnFamily), Bytes.toBytes(column));
-			}else{
-				delete.deleteFamily(Bytes.toBytes(columnFamily));
-			}
-		}
+	public static Delete getDeleteRow(String row) throws IOException {
+		Delete delete = new Delete(Bytes.toBytes(row));
 		return delete;
+	}
+
+	public static Delete getDeleteFamily(String row, String columnFamily)
+			throws IOException {
+		Delete delete = new Delete(Bytes.toBytes(row));
+		delete.addFamily(Bytes.toBytes(columnFamily));
+		return delete;
+	}
+
+	public static Delete getDeleteColumn(String row, String columnFamily,
+			String column) throws IOException {
+		Delete delete = new Delete(Bytes.toBytes(row));
+		delete.addColumns(Bytes.toBytes(columnFamily), Bytes.toBytes(column));
+		return delete;
+	}
+
+	public static Get getGet(String row)
+			throws IOException {
+		Get get = new Get(Bytes.toBytes(row));
+		return get;
+	}
+
+	public static Get getGetFamily(String row, String columFamily)
+			throws IOException {
+		Get get = new Get(Bytes.toBytes(row));
+		get.addFamily(Bytes.toBytes(columFamily));
+		return get;
+	}
+
+	public static Get getGetColumn(String row, String columFamily, String column)
+			throws IOException {
+		Get get = new Get(Bytes.toBytes(row));
+		get.addColumn(Bytes.toBytes(columFamily), Bytes.toBytes(column));
+		return get;
 	}
 
 	/**
@@ -124,18 +148,17 @@ public class PutExample {
 	 *            列名
 	 * @throws IOException
 	 */
-	public static String GetData(String tableName, String row,
-			String columnFamily, String column) throws IOException {
-		HTable table = new HTable(hbaseConfiguration, tableName);
-		Get get = new Get(Bytes.toBytes(row));
-		// get.addColumn(family, qualifier);//指定get取得那一列的数据
-		// get.addFamily(family);//指定取得某一个列族数据
-		Result result = table.get(get);
-		byte[] rb = result.getValue(Bytes.toBytes(columnFamily),
-				Bytes.toBytes(column));
-		String value = new String(rb, "UTF-8");
-		System.out.println(value);
-		return value;
+	public static Result GetData(String tableName, Get get) throws IOException {
+		try {
+			if (get != null) {
+				HTable table = new HTable(hbaseConfiguration, tableName);
+				Result result = table.get(get);
+				return result;
+			}
+		} catch (Exception e) {
+			System.out.println("Error:"+e);
+		}
+		return null;
 	}
 
 	/**
@@ -209,6 +232,7 @@ public class PutExample {
 						+ "]");
 			}
 		}
+		System.out.println("全表扫描结束......");
 	}
 
 	/**
@@ -262,6 +286,15 @@ public class PutExample {
 		return check;
 	}
 
+	public static boolean checkDelete(String tableName, byte[] row,
+			byte[] columnFamily, byte[] column, byte[] data, Delete delete)
+			throws IOException {
+		HTable table = new HTable(hbaseConfiguration, tableName);
+		boolean check = table.checkAndDelete(row, columnFamily, column, data,
+				delete);
+		return check;
+	}
+
 	/**
 	 * 从表中删除一条数据
 	 * 
@@ -269,14 +302,55 @@ public class PutExample {
 	 * @param put
 	 * @throws IOException
 	 */
-	public static void DeleteData(String tableName, Delete delete) throws IOException {
+	public static void DeleteData(String tableName, Delete delete)
+			throws IOException {
 		if (delete != null) {
 			HTable table = new HTable(hbaseConfiguration, tableName);
-			table.delete(delete);;
+			table.delete(delete);
+			table.flushCommits();
+			table.close();
 			System.out.println("数据删除成功！");
 		} else {
 			System.out.println("数据删除失败！");
 		}
+	}
+
+	/**
+	 * 批量删除数据
+	 * 
+	 * @param tableName
+	 * @param deleteList
+	 * @throws IOException
+	 */
+	public static void ListDeleteDate(String tableName, List<Delete> deleteList)
+			throws IOException {
+		if (deleteList.size() != 0) {
+			HTable table = new HTable(hbaseConfiguration, tableName);
+			table.delete(deleteList);
+			table.flushCommits();
+			table.close();
+			System.out.println("数据批量删除成功！");
+		} else {
+			System.out.println("数据批量删除失败！");
+		}
+	}
+
+	public static Object[] execBranch(String tableName, List<Row> branch)
+			throws IOException {
+		try {
+			if (branch != null) {
+				Object[] resultes = new Object[branch.size()];
+				HTable table = new HTable(hbaseConfiguration, tableName);
+				table.batch(branch, resultes);
+				System.out.println("批量执行成功！");
+				return resultes;
+			} else {
+				System.out.println("branch执行列表不存在！");
+			}
+		} catch (Exception e) {
+			System.out.println("Error:" + e);
+		}
+		return null;
 	}
 
 	/**
@@ -286,25 +360,19 @@ public class PutExample {
 		try {
 
 			PutExample.CreateTable("userinfo", "vio1");
-			PutExample.PutData("userinfo",
-					getPut("row1", "vio1", "col1", "Hello1"));
-			PutExample.PutData("userinfo",
-					getPut("row1", "vio1", "col2", "Hello2"));
-			PutExample.PutData("userinfo",
-					getPut("row1", "vio1", "col3", "Hello3"));
-			PutExample.PutData("userinfo",
-					getPut("row1", "vio1", "col4", "Hello4"));
-			PutExample.PutData("userinfo",
-					getPut("row2", "vio1", "col1", "World1"));
-			PutExample.PutData("userinfo",
-					getPut("row2", "vio1", "col2", "World2"));
-			PutExample.PutData("userinfo",
-					getPut("row2", "vio1", "col3", "World3"));
-			PutExample.PutData("userinfo",
-					getPut("row2", "vio1", "col4", "World4"));
-			PutExample.PutData("userinfo",
-					getPut("row2", "vio1", "col5", "World5"));
 
+			// List<Put> putList=new ArrayList<Put>();
+			// putList.add(getPut("row1", "vio1", "col1", "Hello1"));
+			// putList.add(getPut("row1", "vio1", "col2", "Hello2"));
+			// putList.add(getPut("row1", "vio1", "col3", "Hello3"));
+			// putList.add(getPut("row1", "vio1", "col4", "Hello4"));
+			// putList.add(getPut("row1", "vio1", "col5", "Hello5"));
+			// putList.add(getPut("row2", "vio1", "col1", "Hello1"));
+			// putList.add(getPut("row2", "vio1", "col2", "Hello2"));
+			// putList.add(getPut("row2", "vio1", "col3", "Hello3"));
+			// putList.add(getPut("row2", "vio1", "col4", "Hello4"));
+			// putList.add(getPut("row2", "vio1", "col5", "Hello5"));
+			// PutExample.ListPut("userinfo", putList);
 			// PutExample.GetData("userinfo", "row1", "vio1", "col1");
 			// PutExample.GetData("userinfo", "row1", "vio1", "col2");
 
@@ -368,10 +436,55 @@ public class PutExample {
 			// System.out.println("Row: "+Bytes.toString(kv.getRow())+",Value："+Bytes.toString(kv.getValue()));
 			// }
 			// }
-			PutExample.ScanAll("userinfo");
-			PutExample.DeleteData("userinfo", getDelete("row1","vio1","col1"));
-			PutExample.ScanAll("userinfo");
+			// PutExample.ScanAll("userinfo");
 
+			// PutExample.DeleteData("userinfo",
+			// getDelete("row1","vio1","col1"));
+			// PutExample.ScanAll("userinfo");
+
+			// List<Delete> deleteList=new ArrayList<Delete>();
+			// deleteList.add(getDelete("row1","vio1", "col1"));
+			// deleteList.add(getDelete("row1","vio1", "col4"));
+			// deleteList.add(getDelete("row2", "vio1", null));
+			// PutExample.ListDeleteDate("userinfo", deleteList);
+
+			// PutExample.DeleteData("userinfo", getDelete("row2","vio1",
+			// "col3"));
+			// boolean result =
+			// PutExample.checkDelete("userinfo",Bytes.toBytes("row1"),Bytes.toBytes("vio1"),Bytes.toBytes("col2"),Bytes.toBytes("Hello2"),
+			// getDelete("row1", "vio1", "col2"));
+			// System.out.println(result);
+
+			// PutExample.DeleteData("userinfo", getDeleteColumn("row1",
+			// "vio1","col3"));
+
+			// HTable table=new HTable(hbaseConfiguration,"userinfo");
+			// Delete delete=new Delete(Bytes.toBytes("row1"));
+			// delete.addColumns(Bytes.toBytes("vio1"), Bytes.toBytes("col3"));
+			// table.delete(getDeleteColumn("row1","vio1","col3"));
+
+			List<Row> branch=new ArrayList<Row>();
+			branch.add(getPut("row1", "vio1", "col1", "hello1"));
+			branch.add(getPut("row1", "vio1", "col2", "hello2"));
+			branch.add(getPut("row1", "vio1", "col2", "hello3"));
+			
+			Object[] results = PutExample.execBranch("userinfo", branch);
+			for (int i = 0; i < results.length; i++) {
+				System.out.println("Result["+i+"]:"+results[i]);
+			}
+			List<Row> branch2=new ArrayList<Row>();
+			branch2.add(getGetColumn("row1", "vio1", "col1"));
+			branch2.add(getGetColumn("row1", "vio1", "col3"));
+			branch2.add(getDeleteColumn("row1", "vio1", "col3"));
+			Object[] results2 = PutExample.execBranch("userinfo", branch2);
+			for (int i = 0; i < results2.length; i++) {
+				System.out.println("Result["+i+"]:"+results2[i]);
+			}
+//			
+//			PutExample.ScanAll("userinfo");
+			//Result result = GetData("userinfo", getGetFamily("row1", "vio1"));
+			//System.out.println(Bytes.toString(result.getValue(Bytes.toBytes("vio1"), Bytes.toBytes("col1"))));
+			
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
